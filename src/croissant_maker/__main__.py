@@ -61,6 +61,11 @@ def main(
     dataset_version: Optional[str] = typer.Option(
         None, "--dataset-version", help="Dataset version (e.g., 1.0.0)"
     ),
+    date_published: Optional[str] = typer.Option(
+        None,
+        "--date-published",
+        help="Publication date (e.g., 2023-12-15 or 2023-12-15T10:30:00)",
+    ),
     # Creator information following mlcroissant specification
     # Spec: creator is REQUIRED with cardinality MANY (supports multiple creators)
     # ExpectedType: Organization OR Person with flexible properties (name, email, url)
@@ -91,7 +96,27 @@ def main(
 
     if not output:
         output = _get_default_output_name(input)
-        typer.echo(f"📝 Auto-generated output filename: **{output}**")
+        typer.echo(f"Auto-generated output filename: {output}")
+
+    # Validate required fields and input path
+    # 1. Dataset path must exist and be a directory
+    dataset_path_obj = Path(input)
+    if not dataset_path_obj.is_dir():
+        typer.echo(f"Error: Dataset path '{input}' is not a directory", err=True)
+        raise typer.Exit(code=1)
+
+    # 2. At least one creator required by the Croissant spec (cardinality MANY)
+    if not creator:
+        typer.echo(
+            "Error: At least one '--creator' option is required "
+            "to comply with the Croissant specification.",
+            err=True,
+        )
+        typer.echo(
+            "Example: --creator 'John Doe,john@example.com' or --creator 'Jane Smith'",
+            err=True,
+        )
+        raise typer.Exit(code=1)
 
     try:
         with Progress(
@@ -99,7 +124,7 @@ def main(
             TextColumn("[progress.description]{task.description}"),
         ) as progress:
             # Initialize generator with metadata overrides
-            metadata_progress = progress.add_task("🔍 Analyzing dataset...", total=None)
+            metadata_progress = progress.add_task("Analyzing dataset...", total=None)
 
             # Parse creators following mlcroissant specification
             # Allows flexible Person/Organization objects with optional properties
@@ -132,11 +157,12 @@ def main(
                 license=license,
                 citation=citation,
                 version=dataset_version,
+                date_published=date_published,
                 creators=parsed_creators if parsed_creators else None,
             )
 
             # Generate metadata
-            progress.update(metadata_progress, description="⚡ Generating metadata...")
+            progress.update(metadata_progress, description="Generating metadata...")
             metadata_dict = generator.generate_metadata()
 
             # Save and optionally validate
@@ -145,38 +171,36 @@ def main(
 
             if validate:
                 progress.update(
-                    metadata_progress, description="✅ Validating and saving..."
+                    metadata_progress, description="Validating and saving..."
                 )
                 generator.save_metadata(output, validate=True)
-                progress.update(
-                    metadata_progress, description="✅ Validation completed!"
-                )
+                progress.update(metadata_progress, description="Validation completed!")
             else:
-                progress.update(metadata_progress, description="💾 Saving metadata...")
+                progress.update(metadata_progress, description="Saving metadata...")
                 generator.save_metadata(output, validate=False)
-                progress.update(metadata_progress, description="💾 Save completed!")
+                progress.update(metadata_progress, description="Save completed!")
 
         # Show results
         file_count = len(metadata_dict.get("distribution", []))
         record_count = len(metadata_dict.get("recordSet", []))
 
         typer.echo(
-            f"🎉 **Success!** Generated {'validated ' if validate else ''}Croissant metadata"
+            f"Success! Generated {'validated ' if validate else ''}Croissant metadata"
         )
-        typer.echo(f"📁 Files: **{file_count}**")
-        typer.echo(f"📋 Record sets: **{record_count}**")
-        typer.echo(f"📄 Saved to: **{output}**")
+        typer.echo(f"Files: {file_count}")
+        typer.echo(f"Record sets: {record_count}")
+        typer.echo(f"Saved to: {output}")
 
         if not validate:
             typer.echo(
-                f"💡 **Tip:** Run `croissant-maker validate {output}` to validate later"
+                f"Tip: Run `croissant-maker validate {output}` to validate later"
             )
 
     except ValueError as e:
-        typer.echo(f"❌ **Error:** {e}", err=True)
+        typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(code=1)
     except Exception as e:
-        typer.echo(f"❌ **Unexpected error:** {e}", err=True)
+        typer.echo(f"Unexpected error: {e}", err=True)
         raise typer.Exit(code=1)
 
 
@@ -184,17 +208,15 @@ def main(
 def validate(
     file_path: str = typer.Argument(..., help="Path to Croissant metadata file"),
 ) -> None:
-    """**Validate** a Croissant metadata file"""
+    """Validate a Croissant metadata file."""
     try:
+        typer.echo(f"Validating: {file_path}")
         import mlcroissant as mlc
 
-        typer.echo(f"🔍 Validating: **{file_path}**")
-
         dataset = mlc.Dataset(file_path)
-
-        typer.echo("✅ **Valid!** Croissant file passed validation")
-        typer.echo(f"📊 Dataset: **{dataset.metadata.name}**")
-        typer.echo(f"📝 Description: {dataset.metadata.description}")
+        typer.echo("Valid! Croissant file passed validation")
+        typer.echo(f"Dataset: {dataset.metadata.name}")
+        typer.echo(f"Description: {dataset.metadata.description}")
 
         if hasattr(dataset.metadata, "distribution"):
             file_count = (
@@ -202,20 +224,20 @@ def validate(
                 if dataset.metadata.distribution
                 else 0
             )
-            typer.echo(f"📁 Files: **{file_count}**")
+            typer.echo(f"Files: {file_count}")
 
         if hasattr(dataset.metadata, "record_sets"):
             record_count = (
                 len(dataset.metadata.record_sets) if dataset.metadata.record_sets else 0
             )
-            typer.echo(f"📋 Record sets: **{record_count}**")
+            typer.echo(f"Record sets: {record_count}")
 
     except ImportError:
-        typer.echo("❌ **Error:** mlcroissant is required for validation", err=True)
-        typer.echo("💡 **Fix:** pip install mlcroissant", err=True)
+        typer.echo("Error: mlcroissant is required for validation", err=True)
+        typer.echo("Fix: pip install mlcroissant", err=True)
         raise typer.Exit(code=1)
     except Exception as e:
-        typer.echo(f"❌ **Validation failed:** {e}", err=True)
+        typer.echo(f"Validation failed: {e}", err=True)
         raise typer.Exit(code=1)
 
 

@@ -26,7 +26,15 @@ def test_basic_generation(csv_dataset: Path, tmp_path: Path) -> None:
     output = tmp_path / "output.jsonld"
 
     result = runner.invoke(
-        app, ["--input", str(csv_dataset), "--output", str(output), "--no-validate"]
+        app,
+        [
+            "--input",
+            str(csv_dataset),
+            "--output",
+            str(output),
+            "--creator",
+            "Alice Smith",
+        ],
     )
 
     assert result.exit_code == 0
@@ -38,11 +46,9 @@ def test_basic_generation(csv_dataset: Path, tmp_path: Path) -> None:
     assert "Dataset containing" in metadata["description"]
 
 
-def test_comprehensive_overrides(csv_dataset: Path) -> None:
+def test_comprehensive_overrides(csv_dataset: Path, tmp_path: Path) -> None:
     """Test comprehensive metadata overrides with multiple creators."""
-    output_dir = Path("tests/output")
-    output_dir.mkdir(exist_ok=True)
-    output = output_dir / "example-with-overrides.jsonld"
+    output = tmp_path / "example-with-overrides.jsonld"
 
     result = runner.invoke(
         app,
@@ -71,7 +77,6 @@ def test_comprehensive_overrides(csv_dataset: Path) -> None:
             "Alice Johnson",  # Name only
             "--citation",
             "Doe et al. (2024). Machine Learning Dataset v2.1.",
-            "--no-validate",
         ],
     )
 
@@ -108,9 +113,49 @@ def test_comprehensive_overrides(csv_dataset: Path) -> None:
 def test_error_handling() -> None:
     """Test error handling for invalid inputs."""
     # Invalid directory
-    result = runner.invoke(app, ["--input", "/nonexistent", "--no-validate"])
+    result = runner.invoke(
+        app,
+        ["--input", "/nonexistent", "--creator", "Placeholder"],
+    )
     assert result.exit_code == 1
-    assert "Error:" in result.stdout
+    assert "Error:" in result.stderr
+
+
+def test_missing_creator_required(csv_dataset: Path, tmp_path: Path) -> None:
+    """Test that missing --creator flag produces appropriate error."""
+    output = tmp_path / "output.jsonld"
+
+    result = runner.invoke(
+        app,
+        ["--input", str(csv_dataset), "--output", str(output)],
+    )
+
+    assert result.exit_code == 1
+    assert "At least one '--creator' option is required" in result.stderr
+    assert "Example:" in result.stderr
+
+
+def test_invalid_date_format(csv_dataset: Path, tmp_path: Path) -> None:
+    """Test that invalid date format gives clear error message."""
+    output = tmp_path / "output.jsonld"
+
+    result = runner.invoke(
+        app,
+        [
+            "--input",
+            str(csv_dataset),
+            "--output",
+            str(output),
+            "--creator",
+            "Test User",
+            "--date-published",
+            "invalid-date-format",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "Invalid date format for --date-published" in result.stderr
+    assert "Expected ISO format like '2023-12-15'" in result.stderr
 
 
 def test_help_and_version() -> None:

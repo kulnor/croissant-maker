@@ -40,6 +40,7 @@ class MetadataGenerator:
         license: Optional[str] = None,
         citation: Optional[str] = None,
         version: Optional[str] = None,
+        date_published: Optional[str] = None,
         creators: Optional[List[Dict[str, str]]] = None,
     ):
         """
@@ -53,6 +54,7 @@ class MetadataGenerator:
             license: License URL or SPDX identifier
             citation: Citation text (preferably BibTeX format)
             version: Dataset version
+            date_published: Publication date (e.g., "2023-12-15" or "2023-12-15T10:30:00")
             creators: List of creator dictionaries with name, email, url fields
 
         Raises:
@@ -69,6 +71,7 @@ class MetadataGenerator:
         self.license = license
         self.citation = citation
         self.version = version
+        self.date_published = date_published
         self.creators = creators
 
     def generate_metadata(self) -> dict:
@@ -176,6 +179,19 @@ class MetadataGenerator:
             current_year = datetime.now().year
             cite_as = f"Dataset Creator. ({current_year}). {dataset_name} Dataset. Generated with automated type inference."
 
+        # Handle date_published - prioritize user override, then default to current time
+        if self.date_published:
+            try:
+                # Parse user-provided date - supports ISO format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS
+                publication_date = datetime.fromisoformat(self.date_published)
+            except ValueError as e:
+                raise ValueError(
+                    f"Invalid date format for --date-published: '{self.date_published}'. "
+                    f"Expected ISO format like '2023-12-15' or '2023-12-15T10:30:00'. Error: {e}"
+                )
+        else:
+            publication_date = datetime.now()
+
         # Handle version
         dataset_version = self.version or "1.0.0"
 
@@ -185,7 +201,7 @@ class MetadataGenerator:
             url=dataset_url,
             license=license_value,
             creators=creator_objects,
-            date_published=datetime.now(),
+            date_published=publication_date,
             version=dataset_version,
             cite_as=cite_as,
         )

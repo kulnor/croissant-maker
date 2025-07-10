@@ -40,7 +40,7 @@ croissant-maker --help
 ### Generate Croissant Metadata
 
 ```bash
-croissant-maker --input /path/to/dataset --output my-metadata.jsonld
+croissant-maker --input /path/to/dataset --creator "Your Name" --output my-metadata.jsonld
 ```
 
 ### Metadata Override Options
@@ -57,18 +57,19 @@ croissant-maker --input /path/to/dataset \
   --citation "Doe et al. (2024). My Dataset."
 ```
 
-| Flag | Description | Example |
-|------|-------------|---------|
-| `--input, -i` | Dataset directory | `--input /data/my-dataset` |
-| `--output, -o` | Output file | `--output metadata.jsonld` |
-| `--name` | Dataset name | `--name "MIMIC-IV Demo"` |
-| `--description` | Dataset description | `--description "Medical records"` |
-| `--creator` | Creator info (repeat for multiple) | `--creator "Name,email,url"` |
-| `--license` | License (SPDX ID or URL) | `--license "MIT"` |
-| `--citation` | Citation text | `--citation "Author (2024)..."` |
-| `--url` | Dataset homepage | `--url "https://example.com"` |
-| `--dataset-version` | Version | `--dataset-version "1.0.0"` |
-| `--no-validate` | Skip validation | `--no-validate` |
+| Flag | Description | Example | Required |
+|------|-------------|---------|----------|
+| `--input, -i` | Dataset directory | `--input /data/my-dataset` | Yes |
+| `--creator` | Creator info (repeat for multiple) | `--creator "Name,email,url"` | Yes |
+| `--output, -o` | Output file | `--output metadata.jsonld` | |
+| `--name` | Dataset name | `--name "MIMIC-IV Demo"` | |
+| `--description` | Dataset description | `--description "Medical records"` | |
+| `--license` | License (SPDX ID or URL) | `--license "MIT"` | |
+| `--citation` | Citation text | `--citation "Author (2024)..."` | |
+| `--url` | Dataset homepage | `--url "https://example.com"` | |
+| `--dataset-version` | Version | `--dataset-version "1.0.0"` | |
+| `--date-published` | Publication date | `--date-published "2023-12-15"` | |
+| `--no-validate` | Skip validation | `--no-validate` | |
 
 ### Validate a Croissant Metadata File
 
