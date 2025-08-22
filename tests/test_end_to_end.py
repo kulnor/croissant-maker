@@ -11,6 +11,10 @@ from croissant_maker.__main__ import app
 runner = CliRunner()
 
 
+# We intentionally use an explicit, versioned subdirectory for MIMIC-IV to
+# demonstrate running against a precise dataset root. This complements the eICU
+# test, which points to a higher-level directory to exercise recursive
+# file discovery.
 @pytest.fixture
 def mimiciv_demo_path() -> Path:
     """Path to the MIMIC-IV demo dataset for testing."""
@@ -92,3 +96,65 @@ def test_mimiciv_demo_generation(mimiciv_demo_path: Path, output_dir: Path) -> N
     assert len(metadata["creator"]) == 6  # Six creators
     assert len(metadata["distribution"]) > 20  # Many CSV files
     assert len(metadata["recordSet"]) > 10  # Many record sets
+
+
+# We intentionally point the eICU test at the top-level directory to verify that
+# recursive discovery works and handlers filter supported files (e.g., CSV, CSV.GZ).
+# Non-CSV artifacts (HTML, checksums, sqlite) are ignored by design.
+@pytest.fixture
+def eicu_demo_path() -> Path:
+    """Path to the eICU CRD demo dataset for testing."""
+    dataset_path = Path(__file__).parent / "data" / "input" / "eicu_demo"
+
+    if not dataset_path.exists():
+        pytest.skip(f"eICU CRD demo dataset not found at {dataset_path}")
+
+    return dataset_path
+
+
+def test_eicu_demo_generation(eicu_demo_path: Path, output_dir: Path) -> None:
+    """Test end-to-end metadata generation with eICU CRD demo dataset."""
+    output_file = output_dir / "eicu_demo_croissant.jsonld"
+
+    result = runner.invoke(
+        app,
+        [
+            "-i",
+            str(eicu_demo_path),
+            "-o",
+            str(output_file),
+            "--name",
+            "eICU Collaborative Research Database Demo",
+            "--description",
+            "Demo version of the eICU Collaborative Research Database",
+            "--url",
+            "https://physionet.org/content/eicu-crd-demo/2.0.1/",
+            "--dataset-version",
+            "2.0.1",
+            "--date-published",
+            "2021-05-06",
+            "--creator",
+            "Alistair Johnson",
+            "--creator",
+            "Tom Pollard",
+            "--creator",
+            "Omar Badawi",
+            "--creator",
+            "Jesse Raffa",
+            "--citation",
+            "Johnson, A., Pollard, T., Badawi, O., & Raffa, J. (2021). eICU Collaborative Research Database Demo (version 2.0.1). PhysioNet. https://doi.org/10.13026/4mxk-na84",
+        ],
+    )
+
+    assert result.exit_code == 0, f"Command failed: {result.stdout}"
+    assert output_file.exists(), "Output file was not created"
+
+    with open(output_file) as f:
+        metadata = json.load(f)
+
+    assert metadata["name"] == "eICU Collaborative Research Database Demo"
+    assert metadata["version"] == "2.0.1"
+    assert metadata["url"] == "https://physionet.org/content/eicu-crd-demo/2.0.1/"
+    assert len(metadata["creator"]) >= 4
+    assert len(metadata["distribution"]) > 10
+    assert len(metadata["recordSet"]) > 5
