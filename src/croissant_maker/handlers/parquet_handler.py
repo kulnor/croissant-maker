@@ -5,6 +5,8 @@ from typing import Dict
 
 from croissant_maker.handlers.base_handler import FileTypeHandler
 from croissant_maker.handlers.utils import compute_file_hash
+from pyarrow.parquet import ParquetFile
+import pyarrow.types as patypes
 
 
 class ParquetHandler(FileTypeHandler):
@@ -24,16 +26,6 @@ class ParquetHandler(FileTypeHandler):
         """Extract metadata from a Parquet file via pyarrow schema inspection."""
         if not file_path.exists():
             raise FileNotFoundError(f"Parquet file not found: {file_path}")
-
-        try:
-            import pyarrow as pa  # noqa: F401
-            from pyarrow.parquet import ParquetFile
-            import pyarrow.types as patypes
-        except Exception as e:
-            raise RuntimeError(
-                "pyarrow is required to handle Parquet files. "
-                "Please install it (e.g., pip install pyarrow)."
-            ) from e
 
         try:
             pq = ParquetFile(str(file_path))
@@ -61,7 +53,6 @@ class ParquetHandler(FileTypeHandler):
                 "num_rows": num_rows,
                 "num_columns": len(columns),
                 "columns": columns,
-                "sample_data": [],  # Avoid reading data; schema-only for lean operation
             }
         except Exception as e:
             raise ValueError(f"Failed to process Parquet file {file_path}: {e}") from e
