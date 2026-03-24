@@ -6,7 +6,7 @@ A tool to automatically generate [Croissant](https://mlcommons.org/en/news/crois
 
 ## Installation (Development)
 
-It is highly recommended to use a virtual environment to manage dependencies.
+This project uses [uv](https://docs.astral.sh/uv/) for environment and dependency management.
 
 1.  **Clone the repository:**
     ```bash
@@ -14,33 +14,29 @@ It is highly recommended to use a virtual environment to manage dependencies.
     cd croissant-maker
     ```
 
-2.  **Create and activate a virtual environment:**
+2.  **Install dependencies:**
     ```bash
-    # Create a venv
-    python3 -m venv .venv
-
-    # Activate the venv
-    source .venv/bin/activate
+    uv sync --group dev
     ```
+    This creates a `.venv`, installs the package in editable mode, and includes all development and test dependencies.
 
-3.  **Install dependencies:** (Make sure the venv is active)
+3.  **Install the pre-commit hook** (run once; fires automatically on every `git commit` thereafter):
     ```bash
-    pip install -e '.[test]'
+    uv run pre-commit install
     ```
-    This installs the package in editable mode along with testing requirements *inside* your virtual environment.
 
 ## Usage
 
 After installation, you can use the `croissant-maker` CLI:
 
 ```bash
-croissant-maker --help
+uv run croissant-maker --help
 ```
 
 ### Generate Croissant Metadata
 
 ```bash
-croissant-maker --input /path/to/dataset --creator "Your Name" --output my-metadata.jsonld
+uv run croissant-maker --input /path/to/dataset --creator "Your Name" --output my-metadata.jsonld
 ```
 
 ### Metadata Override Options
@@ -48,7 +44,7 @@ croissant-maker --input /path/to/dataset --creator "Your Name" --output my-metad
 You can override default metadata fields:
 
 ```bash
-croissant-maker --input /path/to/dataset \
+uv run croissant-maker --input /path/to/dataset \
   --name "My Dataset" \
   --description "A machine learning dataset" \
   --creator "John Doe,john@example.com,https://john.com" \
@@ -77,27 +73,27 @@ croissant-maker --input /path/to/dataset \
 Validation checks that the file can be loaded by `mlcroissant` and conforms to the basic structure of the specification.
 
 ```bash
-croissant-maker validate my-metadata.jsonld
+uv run croissant-maker validate my-metadata.jsonld
 ```
 
 ## Testing
 
 ```bash
 # Run all tests
-pytest -v
+uv run pytest -v
 
-# Run specific test
-pytest tests/test_cli.py::test_creator_formats -v
+# Run a single test
+uv run pytest tests/test_cli.py::test_creator_formats -v
 ```
 
 ## Pre-Commit Hooks & Code Quality
 
-This project uses `pre-commit` with [Ruff](https://docs.astral.sh/ruff/) to automatically lint and format Python code, ensuring PEP 8 compliance and consistency before commits are made. Basic configuration file checks are also included.
+This project uses `pre-commit` with [Ruff](https://docs.astral.sh/ruff/) to automatically lint and format Python code before commits. Basic configuration file checks (TOML, YAML) are also included.
 
-**Setup (run once after cloning and installing dev dependencies):**
+After running `uv run pre-commit install` once, the hook fires automatically on every `git commit`. To run it manually across all files:
+
 ```bash
-# (Ensure dev dependencies are installed: pip install -e '.[dev]')
-pre-commit install
+uv run pre-commit run --all-files
 ```
 
 ## License
